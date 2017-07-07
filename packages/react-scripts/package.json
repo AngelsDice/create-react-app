@@ -1,5 +1,5 @@
 {
-  "name": "angelsdice-react-scripts",
+  "name": "@angelsdice/react-scripts",
   "version": "1.0.0",
   "description": "Customised Configuration and scripts for Create React App.",
   "repository": "angelsdice/create-react-app",
