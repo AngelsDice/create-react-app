@@ -37,12 +37,19 @@ module.exports = function(
   // Copy over some of the devDependencies
   appPackage.dependencies = appPackage.dependencies || {};
 
+  // Change displayed command to yarn instead of yarnpkg
+  const displayedCommand = useYarn ? 'yarn' : 'npm';
+
   // Setup the script rules
   appPackage.scripts = {
-    start: 'react-scripts start',
-    build: 'react-scripts build',
+    buildcss: 'node-sass-chokidar src/ -o src/',
+    watchcss: `${displayedCommand} run buildcss && node-sass-chokidar src/ -o src/ --watch --recursive`,
+    startjs: 'react-scripts start',
+    start: 'npm-run-all -p watchcss startjs',
+    build: `${displayedCommand} run buildcss && react-scripts build`,
     test: 'react-scripts test --env=jsdom',
     eject: 'react-scripts eject',
+    CI: 'npm run buildcss && npm test'
   };
 
   fs.writeFileSync(
@@ -93,7 +100,10 @@ module.exports = function(
 
   let command;
   let args;
+  let commandDev;
+  let argsDev;
 
+  //add dependencies
   if (useYarn) {
     command = 'yarnpkg';
     args = ['add'];
@@ -103,6 +113,15 @@ module.exports = function(
   }
   args.push('react', 'react-dom');
 
+  //add devdependencies
+  if (useYarn) {
+    commandDev = 'yarnpkg';
+    argsDev = ['add', '--dev'];
+  } else {
+    commandDev = 'npm';
+    argsDev = ['install', '--save-dev', verbose && '--verbose'].filter(e => e);
+  }
+
   // Install additional template dependencies, if present
   const templateDependenciesPath = path.join(
     appPath,
@@ -110,11 +129,31 @@ module.exports = function(
   );
   if (fs.existsSync(templateDependenciesPath)) {
     const templateDependencies = require(templateDependenciesPath).dependencies;
+    const templateDevDependencies = require(templateDependenciesPath)
+      .devDependencies;
     args = args.concat(
       Object.keys(templateDependencies).map(key => {
         return `${key}@${templateDependencies[key]}`;
       })
     );
+    argsDev = argsDev.concat(
+      Object.keys(templateDevDependencies).map(key => {
+        return `${key}@${templateDevDependencies[key]}`;
+      })
+    );
+    console.log();
+    console.log(`Installing template dependencies using ${command}...`);
+    console.log();
+    const proc = spawn.sync(command, args, { stdio: 'inherit' });
+    if (proc.status !== 0) {
+      console.error(`\`${command} ${args.join(' ')}\` failed`);
+      return;
+    }
+    const procDev = spawn.sync(commandDev, argsDev, { stdio: 'inherit' });
+    if (procDev.status !== 0) {
+      console.error(`\`${commandDev} ${argsDev.join(' ')}\` failed`);
+      return;
+    }
     fs.unlinkSync(templateDependenciesPath);
   }
 
@@ -141,9 +180,6 @@ module.exports = function(
   } else {
     cdpath = appPath;
   }
-
-  // Change displayed command to yarn instead of yarnpkg
-  const displayedCommand = useYarn ? 'yarn' : 'npm';
 
   console.log();
   console.log(`Success! Created ${appName} at ${appPath}`);
