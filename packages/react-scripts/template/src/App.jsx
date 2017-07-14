@@ -1,8 +1,7 @@
 import React from 'react';
 import ReactGA from 'react-ga';
 import { HashRouter as Router, Route, Switch } from 'react-router-dom';
-
-import GlobalNav from './components/GlobalNav';
+import { GlobalNav } from '@angelsdice/react-components';
 import HomePage from './containers/HomePage';
 
 ReactGA.initialize(window.gaCode);
